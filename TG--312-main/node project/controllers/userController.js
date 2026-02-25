@@ -1,25 +1,25 @@
-
 const bcrypt = require('bcryptjs')
 const salt = bcrypt.genSaltSync(10);
 const userCollection = require('../models/userModel')
-
+const jwt=require('jsonwebtoken');
+const jwt_secret="manish@123";
 
 const registerUser = async(req, res)=>{
     // console.log(req.body);
     const   {name, email, password} = req.body
-    try{let checkUser = await userCollection.findOne({email:email})  // 
+    try{
+    let checkUser = await userCollection.findOne({email:email})  // 
     if(checkUser){
-        return res.json({msg:"user already registered",success:false})
+        return res.json({msg:"user already registered"})
     }
     else{
         const hashPassword = bcrypt.hashSync(password, salt);
         let data = await userCollection.insertOne({name, email,password:hashPassword})
-        res.json({msg:"user registered successfully", success:true})
+        res.json({msg:"user registered successfully"})
     }
 }catch(error){
-    res.status(500).json({msg:"error in registering user", error:error.message})
+res.status(500).json({msg:"error in updating user", error:error.message})
 }
-    
     
 }
 
@@ -33,7 +33,8 @@ const loginUser = async(req,res)=>{
         // let comparePassword = await bcrypt.hash('originalPass', 'hashPass')
         let comparePassword = await bcrypt.compare(password, checkUser.password)//true or false
         if(comparePassword){
-            return res.json({msg:"user log in successfully" , data:checkUser})
+            let token=await jwt.sign({_id:checkUser._id}, jwt_secret);
+            return res.json({msg:"user log in successfully" , data:checkUser,token})
         }
         else{
             return res.json({msg:"wrong password"})
@@ -46,25 +47,28 @@ const loginUser = async(req,res)=>{
 
 const updateUser = async(req,res)=>{
     // res.send("update function is running")
+
     const {id}=req.params;
     const {name, password} = req.body;
-    try{
-        if(password){
-        var hashPassword = await bcrypt.hash(password, salt);
-        }
-        let data = await userCollection.updateOne({_id:id},{$set:{name:name, password:hashPassword}})
-        res.json({msg:"user updated successfully"})
-    }catch(error){
-        res.status(500).json({msg:"error in updating user", error:error.message})
+    if(password){
+        var hashPassword=await bcrypt.hash(password,salt);
     }
-    
+    let data = await userCollection.updateOne({_id:id},{$set:{name:name, password:hashPassword}})
+    res.json({msg:"user updated successfully"})
 }
 
 const deleteUser = async(req,res)=>{
-    console.log(req.params)
-    let {id} = req.params
-    let data = await userCollection.deleteOne({_id:id})
+
+    // console.log(req.params)
+    // let {id} = req.params
+    // let token =req.headers.authorization;
+    // console.log(token)
+    // let verify=jwt.verify(token,jwt_secret);
+    // console.log(verify);
+    let userId=req.user
+    let data = await userCollection.deleteOne({_id:userId})
     res.json({msg:"user deleted successfully"})
+
 }
 
 module.exports = {
